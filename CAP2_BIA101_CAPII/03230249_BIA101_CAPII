@@ -1,0 +1,91 @@
+from enum import Enum
+
+class EmploymentPosition(Enum):
+    REGULAR = 1
+    CONTRACT = 2
+
+class OrganizationType(Enum):
+    GOVERNMENT = 1
+    PRIVATE = 2
+    CORPORATE = 3
+
+class TaxableIncome:
+    def __init__(self, salary, deductions, bonus=0, num_children=0, child_education_allowance=0):
+        self.salary = salary
+        self.deductions = deductions
+        self.bonus = bonus
+        self.num_children = num_children
+        self.child_education_allowance = child_education_allowance * num_children
+
+    def calculate(self):
+        taxable_income = self.salary + self.bonus - self.deductions - self.child_education_allowance
+        return max(0, taxable_income)
+
+class PersonalIncomeTax:
+    TAX_BRACKETS = [
+        (0, 300000, 0.0),
+        (300001, 400000, 0.1),
+        (400001, 650000, 0.15),
+        (650001, 1000000, 0.2),
+        (1000001, 1500000, 0.25),
+        (1500001, float('inf'), 0.3)
+    ]
+
+    def __init__(self, age, taxable_income, employment_position, organization_type, num_children=0, child_education_allowance=0):
+        self.age = age
+        self.taxable_income = taxable_income
+        self.employment_position = employment_position
+        self.organization_type = organization_type
+        self.num_children = num_children
+        self.child_education_allowance = child_education_allowance
+
+    def calculate_tax(self):
+        if self.age < 18:
+            return "Not liable to pay tax as you are under age."
+
+        taxable_income = self.taxable_income.calculate()
+
+        if self.employment_position == EmploymentPosition.CONTRACT and self.organization_type == OrganizationType.GOVERNMENT:
+            taxable_income += self.child_education_allowance
+            print(f"{self.num_children} child(ren) education allowance: {self.child_education_allowance}")
+            print("As a contract employee in a government organization, GIS and PFF deductions are not allowed for tax deductions.")
+
+        for bracket in self.TAX_BRACKETS:
+            if bracket[0] <= taxable_income <= bracket[1]:
+                tax = bracket[2] * (taxable_income - bracket[0])  # Correct tax calculation
+                break
+        else:
+            # Apply the highest tax bracket rate if taxable income exceeds the highest bracket
+            tax = self.TAX_BRACKETS[-1][2] * (taxable_income - self.TAX_BRACKETS[-1][0])
+
+        if tax >= 1000000:
+            tax *= 1.1
+
+        return f"Tax: {tax}"
+
+# Get employee individual information
+name = input("Enter your name: ")
+age = int(input("Your age: "))
+employment_position = int(input("Enter your employment position, 1=Regular, 2=Contract: "))
+organization_type = int(input("Enter your organization type (1=Government, 2=Private, 3=Corporate): "))
+salary = float(input("Enter your salary per annual: "))
+deductions = float(input("Enter your total PFF and GIS per annual: "))
+bonus = float(input("Enter your bonus per annual: "))
+
+status = input("Enter your status (Single or Married): ")
+
+if status == "Married":
+    num_children = int(input("Enter the number of children: "))
+    child_education_allowance = float(input("Enter the child education allowance per child: "))
+else:
+    num_children = 0
+    child_education_allowance = 0
+
+employment_position_enum = EmploymentPosition(employment_position)
+organization_type_enum = OrganizationType(organization_type)
+
+taxable_income = TaxableIncome(salary, deductions, bonus, num_children, child_education_allowance)
+
+personal_income_tax = PersonalIncomeTax(age, taxable_income, employment_position_enum, organization_type_enum, num_children, child_education_allowance)
+
+print(personal_income_tax.calculate_tax())
